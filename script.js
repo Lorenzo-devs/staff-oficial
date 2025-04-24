@@ -62,9 +62,9 @@ document.getElementById('form-membro').addEventListener('submit', function(e) {
     
     const nome = document.getElementById('nome').value.trim();
     const cargo = document.getElementById('cargo').value.trim();
-    const discord = document.getElementById('discord').value.trim();
+    const email = document.getElementById('email').value.trim();
     
-    if (!nome || !cargo || !discord) {
+    if (!nome || !cargo || !email) {
         alert('Por favor, preencha todos os campos.');
         return;
     }
@@ -73,7 +73,7 @@ document.getElementById('form-membro').addEventListener('submit', function(e) {
         id: Date.now(),
         nome: nome,
         cargo: cargo,
-        discord: discord
+        email: email
     };
     
     membros.push(novoMembro);
@@ -126,7 +126,7 @@ function editarMembro(membroId) {
     if (membro) {
         document.getElementById('nome').value = membro.nome;
         document.getElementById('cargo').value = membro.cargo;
-        document.getElementById('discord').value = membro.discord;
+        document.getElementById('email').value = membro.email;
         mostrarFormulario();
     }
 }

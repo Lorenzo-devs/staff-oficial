@@ -70,7 +70,7 @@ function MemberForm() {
   const [formData, setFormData] = useState({
     name: '',
     role: '',
-    discord: '',
+    email: '',
   });
 
   const handleChange = (e) => {
@@ -115,12 +115,12 @@ function MemberForm() {
           />
         </FormGroup>
         <FormGroup>
-          <Label htmlFor="discord">Discord</Label>
+          <Label htmlFor="email">email</Label>
           <Input
             type="text"
-            id="discord"
-            name="discord"
-            value={formData.discord}
+            id="email"
+            name="email"
+            value={formData.email}
             onChange={handleChange}
             required
           />
