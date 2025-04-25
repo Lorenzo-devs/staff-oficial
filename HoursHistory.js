@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { db } from './firebase';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -78,18 +78,20 @@ function HoursHistory() {
   const [totalHours, setTotalHours] = useState(0);
 
   useEffect(() => {
-    const fetchHours = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const hoursRef = collection(db, 'hours');
-        const q = query(
-          hoursRef,
-          where('memberId', '==', memberId),
-          orderBy('date', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const hoursData = querySnapshot.docs.map(doc => ({
+    setLoading(true);
+    setError(null);
+
+    try {
+      const hoursRef = collection(db, 'hours');
+      const q = query(
+        hoursRef,
+        where('memberId', '==', memberId),
+        orderBy('date', 'desc')
+      );
+
+      // Configura um listener em tempo real
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const hoursData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
@@ -98,15 +100,20 @@ function HoursHistory() {
         // Calcula o total de horas
         const total = hoursData.reduce((sum, hour) => sum + parseFloat(hour.hours), 0);
         setTotalHours(total);
-      } catch (error) {
-        console.error('Erro ao buscar horas:', error);
-        setError('Erro ao carregar o histórico de horas');
-      } finally {
         setLoading(false);
-      }
-    };
+      }, (err) => {
+        console.error('Erro ao buscar horas:', err);
+        setError('Erro ao carregar o histórico de horas');
+        setLoading(false);
+      });
 
-    fetchHours();
+      // Cleanup function para remover o listener quando o componente for desmontado
+      return () => unsubscribe();
+    } catch (error) {
+      console.error('Erro ao configurar listener:', error);
+      setError('Erro ao configurar a sincronização em tempo real.');
+      setLoading(false);
+    }
   }, [memberId]);
 
   if (loading) {

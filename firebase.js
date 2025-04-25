@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -15,8 +15,18 @@ const firebaseConfig = {
 // Inicializa o Firebase
 const app = initializeApp(firebaseConfig);
 
-// Inicializa o Firestore com configurações otimizadas
+// Inicializa o Firestore
 const db = getFirestore(app);
+
+// Habilita persistência offline e sincronização em tempo real
+enableIndexedDbPersistence(db)
+  .catch((err) => {
+    if (err.code == 'failed-precondition') {
+      console.log('Múltiplas abas abertas, persistência pode funcionar apenas em uma aba por vez');
+    } else if (err.code == 'unimplemented') {
+      console.log('O navegador não suporta persistência');
+    }
+  });
 
 // Inicializa o Auth
 const auth = getAuth(app);

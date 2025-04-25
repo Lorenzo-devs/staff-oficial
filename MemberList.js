@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { db } from './firebase';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -89,27 +89,34 @@ function MemberList() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const membersRef = collection(db, 'members');
-        const q = query(membersRef, orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDocs(q);
-        const membersData = querySnapshot.docs.map(doc => ({
+    setLoading(true);
+    setError(null);
+
+    try {
+      const membersRef = collection(db, 'members');
+      const q = query(membersRef, orderBy('createdAt', 'desc'));
+
+      // Configura um listener em tempo real
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const membersData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         setMembers(membersData);
-      } catch (error) {
-        console.error('Erro ao buscar membros:', error);
-        setError('Erro ao carregar os membros. Por favor, tente novamente.');
-      } finally {
         setLoading(false);
-      }
-    };
+      }, (err) => {
+        console.error('Erro ao buscar membros:', err);
+        setError('Erro ao carregar os membros. Por favor, tente novamente.');
+        setLoading(false);
+      });
 
-    fetchMembers();
+      // Cleanup function para remover o listener quando o componente for desmontado
+      return () => unsubscribe();
+    } catch (error) {
+      console.error('Erro ao configurar listener:', error);
+      setError('Erro ao configurar a sincronização em tempo real.');
+      setLoading(false);
+    }
   }, []);
 
   if (loading) {
