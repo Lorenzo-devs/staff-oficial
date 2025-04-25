@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { db } from './firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 600px;
@@ -54,10 +54,14 @@ const Button = styled.button`
   border-radius: 4px;
   font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.2s;
 
   &:hover {
     background-color: #2980b9;
+  }
+
+  &:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
   }
 `;
 
@@ -67,9 +71,12 @@ const ButtonGroup = styled.div`
   margin-top: 2rem;
 `;
 
-const ErrorMessage = styled.p`
-  color: red;
+const ErrorMessage = styled.div`
+  color: #e74c3c;
   margin-bottom: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: #fde8e8;
 `;
 
 function MemberForm() {
@@ -85,9 +92,9 @@ function MemberForm() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }));
   };
 
@@ -97,18 +104,16 @@ function MemberForm() {
     setError(null);
 
     try {
-      const membersRef = collection(db, 'members');
-      const docRef = await addDoc(membersRef, {
+      // Adiciona o documento à coleção 'members'
+      const docRef = await addDoc(collection(db, 'members'), {
         ...formData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        active: true
+        createdAt: new Date().toISOString()
       });
 
       console.log('Membro adicionado com ID:', docRef.id);
       navigate('/members');
     } catch (error) {
-      console.error('Erro ao salvar membro:', error);
+      console.error('Erro ao adicionar membro:', error);
       setError('Erro ao salvar o membro. Por favor, tente novamente.');
     } finally {
       setLoading(false);

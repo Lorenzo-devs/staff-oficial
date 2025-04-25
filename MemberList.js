@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { db } from './firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -24,7 +24,6 @@ const AddButton = styled(Link)`
   font-weight: bold;
   margin-bottom: 2rem;
   text-decoration: none;
-  transition: background-color 0.2s;
 
   &:hover {
     background-color: #27ae60;
@@ -89,34 +88,25 @@ function MemberList() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const membersRef = collection(db, 'members');
-      const q = query(membersRef, orderBy('createdAt', 'desc'));
-
-      // Configura um listener em tempo real
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const membersData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+    async function fetchMembers() {
+      try {
+        setLoading(true);
+        const querySnapshot = await getDocs(collection(db, 'members'));
+        const membersData = [];
+        querySnapshot.forEach((doc) => {
+          membersData.push({ id: doc.id, ...doc.data() });
+        });
+        console.log('Membros encontrados:', membersData); // Debug
         setMembers(membersData);
+      } catch (error) {
+        console.error('Erro ao buscar membros:', error);
+        setError('Não foi possível carregar os membros. Por favor, tente novamente.');
+      } finally {
         setLoading(false);
-      }, (err) => {
-        console.error('Erro ao buscar membros:', err);
-        setError('Erro ao carregar os membros. Por favor, tente novamente.');
-        setLoading(false);
-      });
-
-      // Cleanup function para remover o listener quando o componente for desmontado
-      return () => unsubscribe();
-    } catch (error) {
-      console.error('Erro ao configurar listener:', error);
-      setError('Erro ao configurar a sincronização em tempo real.');
-      setLoading(false);
+      }
     }
+
+    fetchMembers();
   }, []);
 
   if (loading) {
@@ -131,35 +121,39 @@ function MemberList() {
     <Container>
       <Title>Membros da Equipe</Title>
       <AddButton to="/members/new">Adicionar Novo Membro</AddButton>
-      <Table>
-        <thead>
-          <tr>
-            <Th>Nome</Th>
-            <Th>Cargo</Th>
-            <Th>E-mail</Th>
-            <Th>Telefone</Th>
-            <Th>Ações</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {members.map((member) => (
-            <Tr key={member.id}>
-              <Td>{member.name}</Td>
-              <Td>{member.role}</Td>
-              <Td>{member.email}</Td>
-              <Td>{member.phone}</Td>
-              <Td>
-                <ActionButton to={`/hours/${member.id}`}>
-                  Registrar Horas
-                </ActionButton>
-                <ActionButton to={`/history/${member.id}`}>
-                  Histórico
-                </ActionButton>
-              </Td>
-            </Tr>
-          ))}
-        </tbody>
-      </Table>
+      {members.length === 0 ? (
+        <p>Nenhum membro cadastrado. Clique em "Adicionar Novo Membro" para começar.</p>
+      ) : (
+        <Table>
+          <thead>
+            <tr>
+              <Th>Nome</Th>
+              <Th>Cargo</Th>
+              <Th>E-mail</Th>
+              <Th>Telefone</Th>
+              <Th>Ações</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((member) => (
+              <Tr key={member.id}>
+                <Td>{member.name}</Td>
+                <Td>{member.role}</Td>
+                <Td>{member.email}</Td>
+                <Td>{member.phone}</Td>
+                <Td>
+                  <ActionButton to={`/hours/${member.id}`}>
+                    Registrar Horas
+                  </ActionButton>
+                  <ActionButton to={`/history/${member.id}`}>
+                    Histórico
+                  </ActionButton>
+                </Td>
+              </Tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
     </Container>
   );
 }
