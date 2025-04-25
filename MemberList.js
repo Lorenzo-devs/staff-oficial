@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
-import axios from 'axios';
+import { db } from './firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -26,6 +27,22 @@ const Button = styled(Link)`
 
   &:hover {
     background-color: #2980b9;
+  }
+`;
+
+const AddButton = styled(Link)`
+  display: inline-block;
+  background-color: #2ecc71;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  text-decoration: none;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #27ae60;
   }
 `;
 
@@ -66,21 +83,36 @@ const ActionButton = styled(Link)`
 
 function MemberList() {
   const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Aqui você implementaria a chamada à API para buscar os membros
-    // Por enquanto, vamos usar dados mockados
-    const mockMembers = [
-      { id: 1, name: 'João Silva', role: 'Desenvolvedor' },
-      { id: 2, name: 'Maria Santos', role: 'Designer' },
-    ];
-    setMembers(mockMembers);
+    const fetchMembers = async () => {
+      try {
+        const membersRef = collection(db, 'members');
+        const querySnapshot = await getDocs(membersRef);
+        const membersData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMembers(membersData);
+      } catch (error) {
+        console.error('Erro ao buscar membros:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMembers();
   }, []);
+
+  if (loading) {
+    return <div>Carregando...</div>;
+  }
 
   return (
     <Container>
       <Title>Membros da Equipe</Title>
-      <Button to="/members/new">Adicionar Novo Membro</Button>
+      <AddButton to="/members/new">Adicionar Novo Membro</AddButton>
       <Table>
         <thead>
           <tr>

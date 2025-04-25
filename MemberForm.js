@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { db } from './firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 600px;
@@ -71,6 +73,7 @@ function MemberForm() {
     name: '',
     role: '',
     email: '',
+    phone: ''
   });
 
   const handleChange = (e) => {
@@ -81,11 +84,19 @@ function MemberForm() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Aqui você implementaria a chamada à API para salvar o membro
-    console.log('Dados do membro:', formData);
-    navigate('/members');
+    try {
+      const membersRef = collection(db, 'members');
+      await addDoc(membersRef, {
+        ...formData,
+        createdAt: new Date(),
+      });
+      navigate('/members');
+    } catch (error) {
+      console.error('Erro ao salvar membro:', error);
+      alert('Erro ao salvar o membro. Por favor, tente novamente.');
+    }
   };
 
   return (
@@ -115,12 +126,23 @@ function MemberForm() {
           />
         </FormGroup>
         <FormGroup>
-          <Label htmlFor="email">email</Label>
+          <Label htmlFor="email">E-mail</Label>
           <Input
-            type="text"
+            type="email"
             id="email"
             name="email"
             value={formData.email}
+            onChange={handleChange}
+            required
+          />
+        </FormGroup>
+        <FormGroup>
+          <Label htmlFor="phone">Telefone</Label>
+          <Input
+            type="tel"
+            id="phone"
+            name="phone"
+            value={formData.phone}
             onChange={handleChange}
             required
           />

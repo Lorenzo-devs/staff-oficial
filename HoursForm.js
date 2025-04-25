@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { db } from './firebase';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 600px;
@@ -93,14 +95,22 @@ function HoursForm() {
   });
 
   useEffect(() => {
-    // Aqui você implementaria a chamada à API para buscar os dados do membro
-    // Por enquanto, vamos usar dados mockados
-    const mockMember = {
-      id: memberId,
-      name: 'João Silva',
-      role: 'Desenvolvedor',
+    const fetchMember = async () => {
+      try {
+        const membersRef = collection(db, 'members');
+        const q = query(membersRef, where('id', '==', memberId));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const memberData = querySnapshot.docs[0].data();
+          setMember(memberData);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar membro:', error);
+      }
     };
-    setMember(mockMember);
+
+    fetchMember();
   }, [memberId]);
 
   const handleChange = (e) => {
@@ -111,14 +121,20 @@ function HoursForm() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Aqui você implementaria a chamada à API para salvar as horas
-    console.log('Dados das horas:', {
-      memberId,
-      ...formData,
-    });
-    navigate('/members');
+    try {
+      const hoursRef = collection(db, 'hours');
+      await addDoc(hoursRef, {
+        memberId,
+        ...formData,
+        createdAt: new Date(),
+      });
+      navigate('/members');
+    } catch (error) {
+      console.error('Erro ao salvar horas:', error);
+      alert('Erro ao salvar as horas. Por favor, tente novamente.');
+    }
   };
 
   if (!member) {
