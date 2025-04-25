@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { db } from './firebase';
-import { collection, addDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 600px;
@@ -105,6 +105,7 @@ function HoursForm() {
   const navigate = useNavigate();
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
@@ -145,18 +146,27 @@ function HoursForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
+    setError(null);
+
     try {
       const hoursRef = collection(db, 'hours');
-      await addDoc(hoursRef, {
+      const docRef = await addDoc(hoursRef, {
         memberId,
         memberName: member.name,
         ...formData,
-        createdAt: new Date(),
+        hours: parseFloat(formData.hours),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
+
+      console.log('Horas registradas com ID:', docRef.id);
       navigate('/members');
     } catch (error) {
       console.error('Erro ao salvar horas:', error);
-      alert('Erro ao salvar as horas. Por favor, tente novamente.');
+      setError('Erro ao salvar as horas. Por favor, tente novamente.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -175,6 +185,7 @@ function HoursForm() {
   return (
     <Container>
       <Title>Registrar Horas - {member.name}</Title>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
       <Form onSubmit={handleSubmit}>
         <FormGroup>
           <Label htmlFor="date">Data</Label>
@@ -185,6 +196,7 @@ function HoursForm() {
             value={formData.date}
             onChange={handleChange}
             required
+            disabled={saving}
           />
         </FormGroup>
         <FormGroup>
@@ -198,6 +210,7 @@ function HoursForm() {
             min="0"
             step="0.5"
             required
+            disabled={saving}
           />
         </FormGroup>
         <FormGroup>
@@ -208,14 +221,18 @@ function HoursForm() {
             value={formData.description}
             onChange={handleChange}
             required
+            disabled={saving}
           />
         </FormGroup>
         <ButtonGroup>
-          <Button type="submit">Salvar</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
           <Button
             type="button"
             onClick={() => navigate('/members')}
             style={{ backgroundColor: '#95a5a6' }}
+            disabled={saving}
           >
             Cancelar
           </Button>

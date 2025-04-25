@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { db } from './firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 600px;
@@ -67,6 +67,11 @@ const ButtonGroup = styled.div`
   margin-top: 2rem;
 `;
 
+const ErrorMessage = styled.p`
+  color: red;
+  margin-bottom: 1rem;
+`;
+
 function MemberForm() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -75,6 +80,8 @@ function MemberForm() {
     email: '',
     phone: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -86,22 +93,32 @@ function MemberForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+
     try {
       const membersRef = collection(db, 'members');
-      await addDoc(membersRef, {
+      const docRef = await addDoc(membersRef, {
         ...formData,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        active: true
       });
+
+      console.log('Membro adicionado com ID:', docRef.id);
       navigate('/members');
     } catch (error) {
       console.error('Erro ao salvar membro:', error);
-      alert('Erro ao salvar o membro. Por favor, tente novamente.');
+      setError('Erro ao salvar o membro. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Container>
       <Title>Adicionar Novo Membro</Title>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
       <Form onSubmit={handleSubmit}>
         <FormGroup>
           <Label htmlFor="name">Nome Completo</Label>
@@ -112,6 +129,7 @@ function MemberForm() {
             value={formData.name}
             onChange={handleChange}
             required
+            disabled={loading}
           />
         </FormGroup>
         <FormGroup>
@@ -123,6 +141,7 @@ function MemberForm() {
             value={formData.role}
             onChange={handleChange}
             required
+            disabled={loading}
           />
         </FormGroup>
         <FormGroup>
@@ -134,6 +153,7 @@ function MemberForm() {
             value={formData.email}
             onChange={handleChange}
             required
+            disabled={loading}
           />
         </FormGroup>
         <FormGroup>
@@ -145,14 +165,18 @@ function MemberForm() {
             value={formData.phone}
             onChange={handleChange}
             required
+            disabled={loading}
           />
         </FormGroup>
         <ButtonGroup>
-          <Button type="submit">Salvar</Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Salvando...' : 'Salvar'}
+          </Button>
           <Button
             type="button"
             onClick={() => navigate('/members')}
             style={{ backgroundColor: '#95a5a6' }}
+            disabled={loading}
           >
             Cancelar
           </Button>
