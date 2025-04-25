@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import MemberList from './pages/MemberList';
 import MemberForm from './pages/MemberForm';
 import HoursForm from './pages/HoursForm';
+import HoursHistory from './pages/HoursHistory';
 
 const AppContainer = styled.div`
   min-height: 100vh;
@@ -22,6 +23,7 @@ function App() {
           <Route path="/members" element={<MemberList />} />
           <Route path="/members/new" element={<MemberForm />} />
           <Route path="/hours/:memberId" element={<HoursForm />} />
+          <Route path="/history/:memberId" element={<HoursHistory />} />
         </Routes>
       </AppContainer>
     </Router>

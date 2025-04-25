@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { db } from './firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 1200px;
@@ -13,21 +13,6 @@ const Container = styled.div`
 const Title = styled.h1`
   color: #2c3e50;
   margin-bottom: 2rem;
-`;
-
-const Button = styled(Link)`
-  display: inline-block;
-  background-color: #3498db;
-  color: white;
-  padding: 0.8rem 1.5rem;
-  border-radius: 4px;
-  font-weight: bold;
-  margin-bottom: 2rem;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: #2980b9;
-  }
 `;
 
 const AddButton = styled(Link)`
@@ -76,20 +61,41 @@ const Tr = styled.tr`
 const ActionButton = styled(Link)`
   color: #3498db;
   margin-right: 1rem;
+  text-decoration: none;
   &:hover {
     text-decoration: underline;
   }
 `;
 
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #666;
+`;
+
+const ErrorMessage = styled.div`
+  text-align: center;
+  padding: 2rem;
+  color: #e74c3c;
+  background-color: #fde8e8;
+  border-radius: 8px;
+  margin: 1rem 0;
+`;
+
 function MemberList() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchMembers = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const membersRef = collection(db, 'members');
-        const querySnapshot = await getDocs(membersRef);
+        const q = query(membersRef, orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
         const membersData = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -97,6 +103,7 @@ function MemberList() {
         setMembers(membersData);
       } catch (error) {
         console.error('Erro ao buscar membros:', error);
+        setError('Erro ao carregar os membros. Por favor, tente novamente.');
       } finally {
         setLoading(false);
       }
@@ -106,7 +113,11 @@ function MemberList() {
   }, []);
 
   if (loading) {
-    return <div>Carregando...</div>;
+    return <LoadingMessage>Carregando membros...</LoadingMessage>;
+  }
+
+  if (error) {
+    return <ErrorMessage>{error}</ErrorMessage>;
   }
 
   return (
@@ -118,6 +129,8 @@ function MemberList() {
           <tr>
             <Th>Nome</Th>
             <Th>Cargo</Th>
+            <Th>E-mail</Th>
+            <Th>Telefone</Th>
             <Th>Ações</Th>
           </tr>
         </thead>
@@ -126,12 +139,14 @@ function MemberList() {
             <Tr key={member.id}>
               <Td>{member.name}</Td>
               <Td>{member.role}</Td>
+              <Td>{member.email}</Td>
+              <Td>{member.phone}</Td>
               <Td>
                 <ActionButton to={`/hours/${member.id}`}>
                   Registrar Horas
                 </ActionButton>
-                <ActionButton to={`/members/${member.id}`}>
-                  Editar
+                <ActionButton to={`/history/${member.id}`}>
+                  Histórico
                 </ActionButton>
               </Td>
             </Tr>

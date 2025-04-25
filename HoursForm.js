@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { db } from './firebase';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 
 const Container = styled.div`
   max-width: 600px;
@@ -84,10 +84,28 @@ const ButtonGroup = styled.div`
   margin-top: 2rem;
 `;
 
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #666;
+`;
+
+const ErrorMessage = styled.div`
+  text-align: center;
+  padding: 2rem;
+  color: #e74c3c;
+  background-color: #fde8e8;
+  border-radius: 8px;
+  margin: 1rem 0;
+`;
+
 function HoursForm() {
   const { memberId } = useParams();
   const navigate = useNavigate();
   const [member, setMember] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
     hours: '',
@@ -97,16 +115,20 @@ function HoursForm() {
   useEffect(() => {
     const fetchMember = async () => {
       try {
-        const membersRef = collection(db, 'members');
-        const q = query(membersRef, where('id', '==', memberId));
-        const querySnapshot = await getDocs(q);
+        setLoading(true);
+        setError(null);
+        const memberDoc = await getDoc(doc(db, 'members', memberId));
         
-        if (!querySnapshot.empty) {
-          const memberData = querySnapshot.docs[0].data();
-          setMember(memberData);
+        if (memberDoc.exists()) {
+          setMember({ id: memberDoc.id, ...memberDoc.data() });
+        } else {
+          setError('Membro não encontrado');
         }
       } catch (error) {
         console.error('Erro ao buscar membro:', error);
+        setError('Erro ao carregar os dados do membro');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -127,6 +149,7 @@ function HoursForm() {
       const hoursRef = collection(db, 'hours');
       await addDoc(hoursRef, {
         memberId,
+        memberName: member.name,
         ...formData,
         createdAt: new Date(),
       });
@@ -137,8 +160,16 @@ function HoursForm() {
     }
   };
 
+  if (loading) {
+    return <LoadingMessage>Carregando dados do membro...</LoadingMessage>;
+  }
+
+  if (error) {
+    return <ErrorMessage>{error}</ErrorMessage>;
+  }
+
   if (!member) {
-    return <div>Carregando...</div>;
+    return <ErrorMessage>Membro não encontrado</ErrorMessage>;
   }
 
   return (
